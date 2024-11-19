@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # ALUMNOS_BD
+  alumnos_bd:
+    image: mysql:latest
+    container_name: alumnos_bd
+    environment:
+      MYSQL_ROOT_PASSWORD: sebas
+      MYSQL_DATABASE: alumnos
+      MYSQL_USER: usuario_alumno
+      MYSQL_PASSWORD: sebas
+    volumes:
+      - alumnos_bd_data:/var/lib/mysql
+      - ./alumnos.sql:/docker-entrypoint-initdb.d/alumnos.sql
+    networks:
+      - backend
+
+  # MAESTROS_BD
+  maestros_bd:
+    image: mysql:latest
+    container_name: maestros_bd
+    environment:
+      MYSQL_ROOT_PASSWORD: sebas
+      MYSQL_DATABASE: maestros
+      MYSQL_USER: usuario_maestro
+      MYSQL_PASSWORD: sebas
+    ports:
+      - "3307:3306"
+    volumes:
+      - maestros_bd_data:/var/lib/mysql
+      - ./maestros.sql:/docker-entrypoint-initdb.d/maestros.sql
+    networks:
+      - backend
+
+  # App_Alumnos
+  alumnos:
+    build:
+      context: .
+      dockerfile: dockerfile_alumnos.yaml
+    container_name: alumnos_app
+    environment:
+      DB_HOST: alumnos_bd
+      DB_NAME: alumnos
+      DB_USER: usuario_alumno
+      DB_PASSWORD: sebas
+    depends_on:
+      - alumnos_bd
+    ports:
+      - "8080:80"
+    networks:
+      - backend
+
+  # App_Maestros
+  maestros:
+    build:
+      context: .
+      dockerfile: dockerfile_maestros.yaml
+    container_name: maestros_app
+    environment:
+      DB_HOST: maestros_bd
+      DB_NAME: maestros
+      DB_USER: usuario_maestro
+      DB_PASSWORD: sebas
+      API_ALUMNO: alumnos_app:80
+    depends_on:
+      - maestros_bd
+    ports:
+      - "8081:80"
+    networks:
+      - backend
+
+  # phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      PMA_ARBITRARY: 1
+      MYSQL_ROOT_PASSWORD: sebas
+    depends_on:
+      - alumnos_bd
+      - maestros_bd
+    ports:
+      - "8082:80"
+    networks:
+      - backend
+
+volumes:
+  alumnos_bd_data:
+  maestros_bd_data:
+
+networks:
+  backend:
